@@ -1,0 +1,67 @@
+========================================================================
+LINK-TO-QR: TECHNICAL ARCHITECTURE & LOGIC
+========================================================================
+
+1. ENCODING PROCESS: DATA TO MATRIX
+------------------------------------------------------------------------
+The transformation begins by converting the input URL into a binary stream. This 
+stream is segmented into codewords using the QR standard's mode indicators (Byte 
+mode for URLs). 
+
+To ensure scannability even if the code is partially damaged or obscured by a 
+logo, we apply Reed-Solomon Error Correction. This mathematical algorithm adds 
+redundant data blocks (codewords) to the original stream. In this application, 
+we use 'Level Q' (Quartile) error correction, which allows the QR code to 
+recover up to 25% of lost data. The resulting bitstream is then mapped onto a 
+two-dimensional grid (Matrix) of '1s' (dark) and '0s' (light), interleaved 
+with required patterns (Positioning, Timing, and Alignment patterns).
+
+2. STYLING LOGIC: MORPHING & GRADIENTS
+------------------------------------------------------------------------
+The application moves beyond standard pixel grids by treating the QR matrix 
+as a collection of SVG paths or Canvas drawing commands.
+
+- Shape Translation: When a user selects 'Dots' or 'Rounded', the rendering 
+  engine iterates through each '1' bit in the matrix. Instead of a simple 
+  rect(x, y), it calculates arc and corner radius parameters. For 'Classy' 
+  shapes, the engine performs neighborhood checks: if a pixel has an adjacent 
+  neighbor, it connects the paths to create a fluid, continuous shape.
+- Gradient Mapping: Gradients are not applied to individual pixels but are 
+  mapped across the entire QR pattern's bounding box. The engine creates an 
+  SVG <linearGradient> or <radialGradient> with user-defined stops. The entire 
+  pixel path collection is then 'filled' with this gradient reference, 
+  ensuring a seamless color transition from one side of the code to the other.
+
+3. LOGO MASKING: SCANNABILITY PRESERVATION
+------------------------------------------------------------------------
+Integrating a logo requires a "clearance" zone in the center of the matrix. 
+The engine calculates the 'Logo Size' (default 15-20%) and identifies the 
+central coordinate of the QR grid. It then flags all modules (bits) within 
+this central radius as "Don't Draw." 
+
+Because we use Level Q error correction, the QR reader's algorithm can 
+mathematically reconstruct the "missing" bits behind the logo using the 
+Reed-Solomon parity blocks distributed around the edges of the matrix. 
+Additionally, the 'hideBackgroundDots' feature adds a white/empty buffer 
+around the logo to prevent the QR pixels from bleeding into the logo's 
+silhouette, which would increase the noise-to-signal ratio.
+
+4. PERFORMANCE: THE LIVE PREVIEW PIPELINE
+------------------------------------------------------------------------
+Maintaining a 60fps 'Live Preview' during rapid slider movement is achieved 
+through three primary optimizations:
+
+- Decoupled State: We use Zustand to manage the QR state outside of the 
+  main React render loop where possible. This prevents the entire UI sidebar 
+  from re-rendering when only the QR pattern changes.
+- Delta Updates: The `qr-code-styling` engine uses an internal `update()` 
+  method. Instead of re-calculating the entire Reed-Solomon matrix (unless 
+  the URL changes), it only re-renders the styling layer (Canvas/SVG).
+- Virtual Canvas Layering: The QR code is rendered on a separate layer. 
+  By utilizing the HTML5 Canvas API for real-time manipulation and only 
+  converting to SVG during the 'Export' phase, we bypass the heavy DOM 
+  overhead of thousands of SVG nodes during interactive customization.
+
+========================================================================
+ENGINEERED FOR 2026 | LINK-TO-QR GEN
+========================================================================
